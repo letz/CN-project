@@ -1,4 +1,3 @@
-
 public class Log {
 
     private String [] mLog;
