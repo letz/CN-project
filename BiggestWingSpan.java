@@ -15,9 +15,9 @@ public class BiggestWingSpan {
 
   public static class WingSpanMapper extends Mapper<Object, Text, Text, IntWritable>{
 
-      private IntWritable wingspan = new IntWritable();
-      private Text mapkey = new Text();
-      private Log log;
+    private IntWritable wingspan = new IntWritable();
+    private Text mapkey = new Text();
+    private Log log;
 
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
       StringTokenizer itr = new StringTokenizer(value.toString());
