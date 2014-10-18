@@ -1,6 +1,7 @@
 #!/bin/bash
 
-map=`echo "$2" | tr '[:upper:]' '[:lower:]' | cut -d '.' -f 1`
+class_name=`echo "$2" | cut -d '.' -f 1`
+map=`echo "$class_name" | tr '[:upper:]' '[:lower:]'`
 
 if [ $1 == "create" ];then
 	hdfs dfs -mkdir /user/$USER/$map/
@@ -18,9 +19,11 @@ elif [ $1 == "clean-all" ];then
 	hdfs dfs -rmdir /user/$USER/$map/
 	rm *.jar *.class
 elif [ $1 == "run" ];then
-	hadoop com.sun.tools.javac.Main Log.java $3.java
+	hadoop com.sun.tools.javac.Main Log.java $2
 	jar cf ws.jar *.class
-	hadoop jar ws.jar $3 /user/$USER/$map/input /user/$USER/$map/output
+	hadoop jar ws.jar $class_name /user/$USER/$map/input /user/$USER/$map/output
 elif [ $1 == "results" ];then
 	hdfs dfs -cat /user/$USER/$map/output/part-r-00000
+else
+	echo "Available commands: create | clean | clean-all | run | results"
 fi
