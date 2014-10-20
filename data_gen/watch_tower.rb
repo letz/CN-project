@@ -28,7 +28,7 @@ private
   end
 
   def weather
-    rand(3)
+    rand(4)
   end
 
 
