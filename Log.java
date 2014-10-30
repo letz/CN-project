@@ -3,8 +3,8 @@ public class Log {
     private String [] mLog;
 
     public Log(String raw) {
-        mLog = raw.split(",");
-        sanitizeAttributes();
+        raw = raw.replace(raw.charAt(raw.length()-1), '\n');
+        mLog = raw.replaceAll(raw.charAt(8)+"", "").split(",");
     }
 
     public String getTowerId() {
@@ -23,22 +23,15 @@ public class Log {
         return mLog[3];
     }
 
-    public String getWeight() {
-        return mLog[4];
+    public int getWeight() {
+        return Integer.parseInt(mLog[4]);
     }
 
-    public String getWingSpan() {
-        return mLog[5];
+    public int getWingSpan() {
+        return Integer.parseInt(mLog[5]);
     }
 
-    public String getWeather() {
-        return mLog[6];
+    public int getWeather() {
+        return Integer.parseInt(mLog[6]);
     }
-
-    private void sanitizeAttributes() {
-        for(String s : mLog) {
-            s = s.trim();
-        }
-    }
-
 }

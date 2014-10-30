@@ -1,70 +1,112 @@
 import java.io.IOException;
+import java.util.Date;
+import java.util.Iterator;
 import java.util.StringTokenizer;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 
 public class BiggestWingSpan {
 
-    public static class WingSpanMapper extends
-            Mapper<Object, Text, Text, IntWritable> {
+    public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Text, BirdDataWritable> {
 
-        private IntWritable wingspan = new IntWritable();
-        private Text mapkey = new Text();
-        private String weatherCondition = "3";
         private Log log;
 
-        public void map(Object key, Text value, Context context)
-                throws IOException, InterruptedException {
+        @Override
+        public void map(LongWritable key, Text value, OutputCollector<Text, BirdDataWritable> output, Reporter reporter) throws IOException {
             StringTokenizer itr = new StringTokenizer(value.toString());
+            BirdDataWritable mapvalue;
+            Text mapkey;
             while (itr.hasMoreTokens()) {
                 log = new Log(itr.nextToken());
-                if (log.getWeather().equals(weatherCondition)) {
-                    mapkey.set(log.getTowerId() + "," + log.getDate() + ","
-                            + log.getWeather());
-                    wingspan.set(Integer.valueOf(log.getWingSpan()));
-                    context.write(mapkey, wingspan);
-                }
+                mapkey = new Text(BirdKey.makeKey(log.getTowerId(), log.getDate(), log.getWeather()));
+                mapvalue = new BirdDataWritable(log.getWeight(), log.getWingSpan());
+                output.collect(mapkey, mapvalue);
+                mapkey = new Text(BirdKey.makeKey(log.getBirdId()));
+                mapvalue = new BirdDataWritable(log.getDate());
+                output.collect(mapkey, mapvalue);
             }
         }
-
     }
 
-    public static class WingSpanReducer extends
-            Reducer<Text, IntWritable, Text, IntWritable> {
-        private IntWritable result = new IntWritable();
+    public static class Reduce extends MapReduceBase implements Reducer<Text, BirdDataWritable, Text, BirdStatsWritable> {
 
-        public void reduce(Text key, Iterable<IntWritable> values,
-                Context context) throws IOException, InterruptedException {
-            int max = 0;
-            for (IntWritable val : values) {
-                if (val.get() > max) {
-                    max = val.get();
+        private int mMaxWs = 0;
+        private int mSumWeight = 0;
+        private Date mDate = new Date(0);
+        @Override
+        public void reduce(Text key, Iterator<BirdDataWritable> values, OutputCollector<Text, BirdStatsWritable> output, Reporter reporter) throws IOException {
+            
+            BirdDataWritable val;
+            boolean isQ1 = false;
+            while(values.hasNext()) {
+                val = values.next();
+                isQ1 = BirdKey.isQ1(key.toString());
+                if(isQ1) {
+                    handleQ1(key, val);
+                }
+                else {
+                    handleQ2(key, val);
                 }
             }
-            result.set(max);
-            context.write(key, result);
+            
+            if(isQ1) {
+                output.collect(key, new BirdStatsWritable(mSumWeight, mMaxWs));
+            } else {
+                output.collect(key, new BirdStatsWritable(mDate)); 
+            }
+            
+        }
+        
+        public void handleQ1(Text key, BirdDataWritable val) {
+            if (val.getWingSpan() > mMaxWs) {
+                mMaxWs = val.getWingSpan();
+            }
+            mSumWeight += val.getWeight();
+        }
+        
+        public void handleQ2(Text key, BirdDataWritable value)  {
+            Date dateval = value.getRealDate();
+            if (mDate.getTime() < dateval.getTime()) {
+                mDate = dateval;
+            }
         }
     }
 
     public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "BiggestWingSpan");
-        job.setJarByClass(BiggestWingSpan.class);
-        job.setMapperClass(WingSpanMapper.class);
-        job.setCombinerClass(WingSpanReducer.class);
-        job.setReducerClass(WingSpanReducer.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        JobConf conf = new JobConf(BiggestWingSpan.class);
+        conf.setJobName(BiggestWingSpan.class.getName());
+
+        //Mapper Outputs
+        conf.setMapOutputKeyClass(Text.class);
+        conf.setMapOutputValueClass(BirdDataWritable.class);
+
+        //Reducer Outputs
+        conf.setOutputKeyClass(Text.class);
+        conf.setOutputValueClass(BirdStatsWritable.class);
+
+        conf.setMapperClass(Map.class);
+        //conf.setCombinerClass(Reduce.class);
+        conf.setReducerClass(Reduce.class);
+
+        conf.setInputFormat(TextInputFormat.class);
+        conf.setOutputFormat(TextOutputFormat.class);
+
+        FileInputFormat.setInputPaths(conf, new Path(args[0]));
+        FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+
+        JobClient.runJob(conf);
     }
 }
