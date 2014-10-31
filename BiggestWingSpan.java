@@ -26,7 +26,7 @@ public class BiggestWingSpan {
 
         @Override
         public void map(LongWritable key, Text value, OutputCollector<Text, BirdDataWritable> output, Reporter reporter) throws IOException {
-            StringTokenizer itr = new StringTokenizer(value.toString());
+            StringTokenizer itr = new StringTokenizer(value.toString().replaceAll("\\s+",""));
             BirdDataWritable mapvalue;
             Text mapkey;
             while (itr.hasMoreTokens()) {
@@ -103,6 +103,7 @@ public class BiggestWingSpan {
 
         conf.setInputFormat(TextInputFormat.class);
         conf.setOutputFormat(TextOutputFormat.class);
+        //conf.setOutputFormat(SQLOutputFormat.class);
 
         FileInputFormat.setInputPaths(conf, new Path(args[0]));
         FileOutputFormat.setOutputPath(conf, new Path(args[1]));

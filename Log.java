@@ -3,10 +3,9 @@ public class Log {
     private String [] mLog;
 
     public Log(String raw) {
-        raw = raw.replace(raw.charAt(raw.length()-1), '\n');
-        mLog = raw.replaceAll(raw.charAt(8)+"", "").split(",");
+        mLog = raw.replaceAll("\\s+","").split(",");
+       // sanitizeAttributes();
     }
-
     public String getTowerId() {
         return mLog[0];
     }
