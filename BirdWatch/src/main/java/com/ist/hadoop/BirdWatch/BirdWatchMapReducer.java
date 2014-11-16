@@ -18,7 +18,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.TextOutputFormat;
 
 public class BirdWatchMapReducer {
 
@@ -104,7 +103,8 @@ public class BirdWatchMapReducer {
         conf.setReducerClass(Reduce.class);
 
         conf.setInputFormat(TextInputFormat.class);
-        conf.setOutputFormat(TextOutputFormat.class);
+        //conf.setOutputFormat(TextOutputFormat.class);
+        conf.setOutputFormat(DynamoDBOutputFormat.class);
         //conf.setOutputFormat(SQLOutputFormat.class);
 
         FileInputFormat.setInputPaths(conf, new Path(args[0]));

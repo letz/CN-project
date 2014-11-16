@@ -37,7 +37,7 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
          */
         public static AmazonDynamoDBClient getDynamoDBConnection() throws IOException {
             if(conn == null) {
-                BasicAWSCredentials credentials = new BasicAWSCredentials(USER,PASS);  
+                BasicAWSCredentials credentials = new BasicAWSCredentials(USER,PASS);
                 conn = new AmazonDynamoDBClient(credentials);
                 conn.setEndpoint(URL);
             }
@@ -64,7 +64,7 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                    if (BirdKey.isQ1(k.toString())){
                        String[] q1Keys = BirdKey.q1Keys(k.toString());
                        Map<String, AttributeValue> item = newItem(q1Keys[1], q1Keys[0], q1Keys[2], v.getMaxWingSpan(), v.getWeighSum());
-                       dynamoInsert("q1_q2", item);
+                       dynamoInsert("query", item);
                     }
                     else {
                     }
@@ -81,8 +81,14 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                 public void dynamoInsert(String table,Map<String, AttributeValue> item){
                     try{  
                         PutItemRequest putItemRequest = new PutItemRequest(table, item);
-                        PutItemResult putItemResult = conn.putItem(putItemRequest);
-                        System.out.println("Result: " + putItemResult);
+                        PutItemResult putItemResult;
+                        try {
+                            putItemResult = getDynamoDBConnection().putItem(putItemRequest);
+                            System.out.println("Result: " + putItemResult);
+                        } catch (IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        } 
                         
                     } catch (AmazonServiceException ase) {
                         
@@ -108,10 +114,10 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
         private static Map<String, AttributeValue> newItem(String date, String tid, String weatherConditions, int maxWingspan, int sumWeight) {
             Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
             item.put("date", new AttributeValue(date));
-            item.put("tid", new AttributeValue(tid));
-            item.put("weather_conditions", new AttributeValue().withN(weatherConditions));
-            item.put("max_ws",new AttributeValue().withN(Integer.toString(maxWingspan)));
-            item.put("sum_weight", new AttributeValue().withN(Integer.toString(sumWeight)));
+            item.put("tower_id", new AttributeValue(tid));
+            item.put("weather", new AttributeValue().withN(weatherConditions));
+            item.put("wing_span",new AttributeValue().withN(Integer.toString(maxWingspan)));
+            item.put("weight_sum", new AttributeValue().withN(Integer.toString(sumWeight)));
             return item;
         }
 
