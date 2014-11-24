@@ -29,6 +29,11 @@ public class BirdKey {
         return raw.split(",");
     }
 
+    public static String q3Key(String key){
+        //BID
+        return removeQueryIndentifier(key);
+    }
+
     public static boolean isQ1(String key) {
         return key.charAt(0) == '1';
     }
