@@ -10,8 +10,8 @@ public class BirdKey {
         return query + towerId + "," + date;
     }
 
-    public static String makeKey(String birdId) {
-        return "3" + birdId;
+    public static String makeKey(String value, String query) {
+        return query + value;
     }
 
     public static String getBid(String key){

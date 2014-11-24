@@ -49,7 +49,7 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
         public void checkOutputSpecs(FileSystem arg0, JobConf arg1)
                 throws IOException {
             // TODO Auto-generated method stub
-            
+
         }
 
         @Override
@@ -57,19 +57,21 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                 FileSystem arg0, JobConf arg1, String arg2, Progressable arg3)
                 throws IOException {
             return new RecordWriter<Text, BirdStatsWritable>() {
-                
+
                 @Override
                 public void write(Text k, BirdStatsWritable v)
                         throws IOException {
+                   getDynamoDBConnection();
                    if (BirdKey.isQ1(k.toString())){
                        String[] q1Keys = BirdKey.q1Keys(k.toString());
-                       Map<String, AttributeValue> item = newItem(q1Keys[1], q1Keys[0], q1Keys[2], v.getMaxWingSpan(), v.getWeighSum());
-                       dynamoInsert("query", item);
+                       System.out.println("----------->>>>"+q1Keys[0] +":"+ q1Keys[1] +":"+ v.getMaxWingSpan());
+                       Map<String, AttributeValue> item = newItem(q1Keys[0], q1Keys[1], v.getMaxWingSpan());
+                       dynamoInsert("query1", item);
                     }
                     else {
                     }
                 }
-                
+
                 /**
                  * Temporary empty implementation.
                  * It could be useful to store a batch of sql updates in order
@@ -77,21 +79,15 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                  */
                 @Override
                 public void close(Reporter arg0) throws IOException {}
-                
+
                 public void dynamoInsert(String table,Map<String, AttributeValue> item){
-                    try{  
+                    try{
                         PutItemRequest putItemRequest = new PutItemRequest(table, item);
-                        PutItemResult putItemResult;
-                        try {
-                            putItemResult = getDynamoDBConnection().putItem(putItemRequest);
-                            System.out.println("Result: " + putItemResult);
-                        } catch (IOException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
-                        } 
-                        
+                        PutItemResult putItemResult = conn.putItem(putItemRequest);
+                        System.out.println("Result: " + putItemResult);
+
                     } catch (AmazonServiceException ase) {
-                        
+
                         System.out.println("Caught an AmazonServiceException, which means your request made it "
                                 + "to AWS, but was rejected with an error response for some reason.");
                         System.out.println("Error Message:    " + ase.getMessage());
@@ -99,27 +95,25 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                         System.out.println("AWS Error Code:   " + ase.getErrorCode());
                         System.out.println("Error Type:       " + ase.getErrorType());
                         System.out.println("Request ID:       " + ase.getRequestId());
-                        
+
                     } catch (AmazonClientException ace) {
                         System.out.println("Caught an AmazonClientException, which means the client encountered "
                                 + "a serious internal problem while trying to communicate with AWS, "
                                 + "such as not being able to access the network.");
                         System.out.println("Error Message: " + ace.getMessage());
                     }
-                    
+
                 }
             };
         }
-        
-        private static Map<String, AttributeValue> newItem(String date, String tid, String weatherConditions, int maxWingspan, int sumWeight) {
+
+        private static Map<String, AttributeValue> newItem(String date, String tid,int maxWingspan) {
             Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
             item.put("date", new AttributeValue(date));
             item.put("tower_id", new AttributeValue(tid));
-            item.put("weather", new AttributeValue().withN(weatherConditions));
-            item.put("wing_span",new AttributeValue().withN(Integer.toString(maxWingspan)));
-            item.put("weight_sum", new AttributeValue().withN(Integer.toString(sumWeight)));
+            item.put("max_ws",new AttributeValue().withN(Integer.toString(maxWingspan)));
             return item;
         }
 
-        
+
     }

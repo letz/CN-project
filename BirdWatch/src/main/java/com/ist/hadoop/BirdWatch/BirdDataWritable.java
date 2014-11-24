@@ -14,23 +14,27 @@ public class BirdDataWritable implements Writable {
     private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
     private int mWeight;
     private int mWingSpan;
-    private String mDate = "";
+    private String mTower = "T-0000";
+    private String mDate = new Date(0).toString();
 
     public BirdDataWritable() {
         super();
+        setWeight(0);
+        setWingSpan(0);
     }
 
-    public BirdDataWritable(int value, String query) {
+    public BirdDataWritable(int value) {
         super();
-        if (query.equals("Q1")){
-            this.setWingSpan(value);
-        }
-        else{
-            this.setWeight(value);
-        }
+        this.setWeight(value);
 
     }
+    public BirdDataWritable(String tid, int ws) {
+        super();
+        this.setTower(tid);
+        this.setWingSpan(ws);
 
+
+    }
     public BirdDataWritable(String date) {
         super();
         this.setDate(date);
@@ -40,14 +44,16 @@ public class BirdDataWritable implements Writable {
     public void readFields(DataInput in) throws IOException {
         this.setWingSpan(in.readInt());
         this.setWeight(in.readInt());
-        this.setDate(in.readLine());
+        String[] inData = in.readLine().split(",");
+        this.setTower(inData[0]);
+        this.setDate(inData[1]);
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(getWingSpan());
         out.writeInt(getWeight());
-        out.writeBytes(getDate());
+        out.writeBytes(getTower()+","+getDate());
     }
 
     public int getWeight() {
@@ -75,12 +81,23 @@ public class BirdDataWritable implements Writable {
             return formatter.parse(mDate);
         } catch (ParseException e) {
             return new Date(0);
+        } catch (NullPointerException e) {
+            return new Date(0);
         }
     }
 
     public void setDate(String data) {
         this.mDate = data;
     }
+
+    public String getTower() {
+        return mTower;
+    }
+
+    public void setTower(String mTower) {
+        this.mTower = mTower;
+    }
+
 
 }
 

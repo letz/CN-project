@@ -32,15 +32,18 @@ public class BirdWatchMapReducer {
             Text mapkey;
             while (itr.hasMoreTokens()) {
                 log = new Log(itr.nextToken());
-                if(log.getWeather() == 3){
-                    mapkey = new Text(BirdKey.makeKey(log.getTowerId(), log.getDate(), "1"));
-                    mapvalue = new BirdDataWritable( log.getWingSpan() , "Q1");
+                //Q1
+                if(log.getWeather() == 2){
+                    mapkey = new Text(BirdKey.makeKey(log.getDate(), "1"));
+                    mapvalue = new BirdDataWritable(log.getTowerId(), log.getWingSpan());
                     output.collect(mapkey, mapvalue);
                 }
+                //Q2
                 mapkey = new Text(BirdKey.makeKey(log.getTowerId(), log.getDate(), "2"));
-                mapvalue = new BirdDataWritable(log.getWeight(), "Q2");
+                mapvalue = new BirdDataWritable(log.getWeight());
                 output.collect(mapkey, mapvalue);
-                mapkey = new Text(BirdKey.makeKey(log.getBirdId()));
+                //Q3
+                mapkey = new Text(BirdKey.makeKey(log.getBirdId(),"3"));
                 mapvalue = new BirdDataWritable(log.getDate());
                 output.collect(mapkey, mapvalue);
             }
@@ -49,15 +52,19 @@ public class BirdWatchMapReducer {
 
     public static class Reduce extends MapReduceBase implements Reducer<Text, BirdDataWritable, Text, BirdStatsWritable> {
 
-        private int mMaxWs = 0;
-        private int mSumWeight = 0;
-        private Date mDate = new Date(0);
+        private int mMaxWs;
+        private int mSumWeight;
+        private Date mDate;
+        private String mTid;
         @Override
         public void reduce(Text key, Iterator<BirdDataWritable> values, OutputCollector<Text, BirdStatsWritable> output, Reporter reporter) throws IOException {
 
             BirdDataWritable val;
             boolean isQ1 = false;
             boolean isQ2 = false;
+            mMaxWs = 0;
+            mSumWeight = 0;
+            mDate = new Date(0);
 
             while(values.hasNext()) {
                 val = values.next();
@@ -65,17 +72,20 @@ public class BirdWatchMapReducer {
                 isQ2 = BirdKey.isQ2(key.toString());
                 if(isQ1) {
                     handleQ1(key, val);
+
                 }
                 else if(isQ2) {
+
                     handleQ2(key, val);
                 }
                 else {
+
                     handleQ3(key, val);
                 }
             }
 
             if(isQ1) {
-                output.collect(key, new BirdStatsWritable(mMaxWs, "Q1"));
+                output.collect(new Text(key + "," + mTid), new BirdStatsWritable(mMaxWs, "Q1"));
             }
             else if(isQ2) {
                 output.collect(key, new BirdStatsWritable(mSumWeight, "Q2"));
@@ -89,6 +99,7 @@ public class BirdWatchMapReducer {
         public void handleQ1(Text key, BirdDataWritable val) {
             if (val.getWingSpan() > mMaxWs) {
                 mMaxWs = val.getWingSpan();
+                mTid = val.getTower();
             }
         }
 
@@ -122,8 +133,8 @@ public class BirdWatchMapReducer {
 
         conf.setInputFormat(TextInputFormat.class);
         //conf.setOutputFormat(TextOutputFormat.class);
-        //conf.setOutputFormat(DynamoDBOutputFormat.class);
-        conf.setOutputFormat(SQLOutputFormat.class);
+        conf.setOutputFormat(DynamoDBOutputFormat.class);
+        //conf.setOutputFormat(SQLOutputFormat.class);
 
         FileInputFormat.setInputPaths(conf, new Path(args[0]));
         FileOutputFormat.setOutputPath(conf, new Path(args[1]));

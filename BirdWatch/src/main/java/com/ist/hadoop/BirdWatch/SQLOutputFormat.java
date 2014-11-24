@@ -19,11 +19,12 @@ public class SQLOutputFormat implements OutputFormat<Text, BirdStatsWritable> {
         /**
          * Access credentials (there credentials are public).
          */
-        private static String USER = "";
+        private static String USER = "ist168211";
         private static String URL = "jdbc:postgresql://db.ist.utl.pt:5432/ist168211";
-        private static String PASS = "";
-        private static String TABLE1 = "q1q2";
-        private static String TABLE2 = "q3";
+        private static String PASS = System.getenv("PG_SIGMA");
+        private static String TABLE1 = "q1";
+        private static String TABLE2 = "q2";
+        private static String TABLE3 = "q3";
         private static Connection conn = null;
         private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
@@ -66,13 +67,13 @@ public class SQLOutputFormat implements OutputFormat<Text, BirdStatsWritable> {
                     String rawSQL = null;
                     if (BirdKey.isQ1(k.toString())){
                         String[] q1Keys = BirdKey.q1Keys(k.toString());
-                        rawSQL = upsert(TABLE1, q1Keys[0], q1Keys[1], 0, v.getMaxWingSpan());
+                        rawSQL = upsert(TABLE1, q1Keys[1], q1Keys[0], 0, v.getMaxWingSpan());
                     } else if (BirdKey.isQ2(k.toString())){
                         String[] q2Keys = BirdKey.q1Keys(k.toString());
-                        rawSQL = upsert(TABLE1, q2Keys[0], q2Keys[1], v.getWeighSum(),0);
+                        rawSQL = upsert(TABLE2, q2Keys[0], q2Keys[1], v.getWeighSum(),0);
                     } else{
                         String q3Key = BirdKey.q3Key(k.toString());
-                        rawSQL = upsert( TABLE2, q3Key, formatter.format(v.getDate()));
+                        rawSQL = upsert( TABLE3, q3Key, formatter.format(v.getDate()));
                     }
                     try{
                         getSQLConnection().prepareStatement(rawSQL).execute();
@@ -80,26 +81,29 @@ public class SQLOutputFormat implements OutputFormat<Text, BirdStatsWritable> {
                 }
                 private String upsert(String table,String tid, String date,
                         int weightSum, int maxWingSpan) {
-                    String updateValue;
+                    String updateValue = "";
+                    String insert = "";
                     if (weightSum == 0){
                         updateValue = " max_ws="+"\'"+ maxWingSpan + "\' ";
+                        insert =
+                                " INSERT INTO "+ table + " (t_id, log_date,max_ws) " +
+                                " SELECT " + "\'" + tid +"\',"
+                                           + "\'" + date + "\',"
+                                           + "\'"+ maxWingSpan +"\'"+
+                                " WHERE NOT EXISTS (SELECT 1 FROM "+ table + " WHERE log_date=\'"+ date + "\');";
                     } else if(maxWingSpan == 0){
                         updateValue = " sum_weight="+"\'"+ weightSum + "\' ";
-                    } else{
-                        updateValue =" max_ws="+"\'"+ maxWingSpan + "\', "+ " sum_weight="+"\'"+ weightSum + "\' ";
+                        insert =
+                                " INSERT INTO "+ table + " (t_id, log_date, sum_weight) " +
+                                " SELECT " + "\'" + tid +"\',"
+                                           + "\'" + date + "\',"
+                                           + "\'"+ weightSum +"\'"+
+                                " WHERE NOT EXISTS (SELECT 1 FROM "+ table + " WHERE log_date=" + "\'" + date + "\' and t_id=\'"+ tid + "\');";
                     }
-
                     String update =
                             " UPDATE "+ table + " SET " + updateValue +
                             " WHERE log_date=" + "\'" + date + "\'" + " and t_id=" + "\'"+ tid + "\';";
 
-                    String insert =
-                            " INSERT INTO "+ table + " (t_id, log_date, sum_weight, max_ws) " +
-                            " SELECT " + "\'" + tid +"\',"
-                                       + "\'" + date + "\',"
-                                       + "\'"+ weightSum +"\',"
-                                       + "\'"+ maxWingSpan +"\'" +
-                            " WHERE NOT EXISTS (SELECT 1 FROM "+ table + " WHERE log_date=" + "\'" + date + "\' and t_id=\'"+ tid + "\');";
                     return update + " " + insert;
                 }
                 private String upsert(String table,String bid, String date) {
