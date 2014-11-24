@@ -20,10 +20,15 @@ public class BirdDataWritable implements Writable {
         super();
     }
 
-    public BirdDataWritable(int weight, int wingspan) {
+    public BirdDataWritable(int value, String query) {
         super();
-        this.setWeight(weight);
-        this.setWingSpan(wingspan);
+        if (query.equals("Q1")){
+            this.setWingSpan(value);
+        }
+        else{
+            this.setWeight(value);
+        }
+
     }
 
     public BirdDataWritable(String date) {
@@ -31,6 +36,7 @@ public class BirdDataWritable implements Writable {
         this.setDate(date);
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
         this.setWingSpan(in.readInt());
         this.setWeight(in.readInt());

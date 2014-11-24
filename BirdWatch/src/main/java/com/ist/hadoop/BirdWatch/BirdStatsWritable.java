@@ -10,9 +10,9 @@ import java.util.Date;
 import org.apache.hadoop.io.Writable;
 
 public class BirdStatsWritable implements Writable {
-    
+
     private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-    
+
     private int mWeightSum;
     private int mMaxWingSpan;
     private Date mDate = null;
@@ -20,16 +20,21 @@ public class BirdStatsWritable implements Writable {
     public BirdStatsWritable() {
         super();
     }
-    
+
     public BirdStatsWritable(Date date) {
         super();
         this.setDate(date);
     }
 
-    public BirdStatsWritable(int weightedSum, int maxWingSpan) {
+    public BirdStatsWritable(int value, String query) {
         super();
-        this.setWeightSum(weightedSum);
-        this.setMaxWingSpan(maxWingSpan);
+        if (query.equals("Q1")){
+            this.setMaxWingSpan(value);
+        }
+        else{
+            this.setWeightSum(value);
+        }
+
     }
 
     @Override
@@ -37,7 +42,7 @@ public class BirdStatsWritable implements Writable {
         this.setWeightSum(in.readInt());
         this.setMaxWingSpan(in.readInt());
         this.setDate(in.readLine());
-        
+
     }
 
     @Override
@@ -63,9 +68,12 @@ public class BirdStatsWritable implements Writable {
         this.mWeightSum = mWeightedSum;
     }
 
+    @Override
     public String toString() {
-        if(mDate == null)
-            return this.getWeighSum() + "," + this.getMaxWingSpan();
+        if(mDate == null && mWeightSum == 0)
+            return this.getMaxWingSpan() + "";
+        if(mDate == null && mMaxWingSpan == 0)
+            return this.getWeighSum() + "";
         else
             return formatter.format(this.getDate());
 
@@ -78,7 +86,7 @@ public class BirdStatsWritable implements Writable {
     public void setDate(Date date) {
         this.mDate = date;
     }
-    
+
     public void setDate(String date) {
         try {
             this.setDate(formatter.parse(date));
