@@ -1,6 +1,7 @@
 package com.ist.hadoop.BirdWatch;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,19 +18,24 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.PutItemResult;
+import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
+import com.amazonaws.services.dynamodbv2.model.UpdateItemRequest;
+import com.amazonaws.services.dynamodbv2.model.UpdateItemResult;
 
 
 public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritable> {
         /**
          * Access credentials (there credentials are public).
          */
-        private static String USER = "nice_try";
+        private static String USER = "";
         private static String URL = "dynamodb.us-west-2.amazonaws.com";
-        private static String PASS = "nice_try";
-        private static AmazonDynamoDBClient conn = null;        
-        
+        private static String PASS = "";
+        private static String TABLE_1 = "query1";
+        private static String TABLE_2 = "query2";
+        private static String TABLE_3 = "query3";
+        private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        private static AmazonDynamoDBClient conn = null;
+
         /**
          * Helper to get a connection.
          * @return - a DynamoDB connection.
@@ -62,14 +68,41 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                 public void write(Text k, BirdStatsWritable v)
                         throws IOException {
                    getDynamoDBConnection();
+                   String query;
+                   Map<String, AttributeValueUpdate > item ;
+                   HashMap<String, AttributeValue> key;
+
                    if (BirdKey.isQ1(k.toString())){
                        String[] q1Keys = BirdKey.q1Keys(k.toString());
+                       query = TABLE_1;
+                       //key -> date:tower_id
                        System.out.println("----------->>>>"+q1Keys[0] +":"+ q1Keys[1] +":"+ v.getMaxWingSpan());
-                       Map<String, AttributeValue> item = newItem(q1Keys[0], q1Keys[1], v.getMaxWingSpan());
-                       dynamoInsert("query1", item);
+                       item = newItem("max_ws",v.getMaxWingSpan()+"");
+                       key = new HashMap<String, AttributeValue>();
+                       key.put("date", new AttributeValue(q1Keys[0]));
+                       key.put("tower_id",new AttributeValue(q1Keys[1]));
+                    }
+                   else if (BirdKey.isQ2(k.toString())){
+                       String[] q2Keys = BirdKey.q1Keys(k.toString());
+                       query = TABLE_2;
+                       //key -> tower_id:date
+                       System.out.println("----------->>>>"+q2Keys[0] +":"+ q2Keys[1] +":"+ v.getWeighSum());
+                       item = newItem("weight_sum",v.getWeighSum()+"");
+                       key = new HashMap<String, AttributeValue>();
+                       key.put("date", new AttributeValue(q2Keys[0]));
+                       key.put("tower_id",new AttributeValue(q2Keys[1]));
                     }
                     else {
+                        //key -> b_id
+                        String q3Key = BirdKey.q3Key(k.toString());
+                        query = TABLE_3;
+                        System.out.println("----------->>>>"+q3Key+":"+ formatter.format(v.getDate()));
+                        item = null;
+                        key = new HashMap<String, AttributeValue>();
+                        key.put("b_id", new AttributeValue(q3Key));
+                        key.put("date",new AttributeValue(formatter.format(v.getDate())));
                     }
+                   dynamoInsert(query, key,item);
                 }
 
                 /**
@@ -80,10 +113,10 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                 @Override
                 public void close(Reporter arg0) throws IOException {}
 
-                public void dynamoInsert(String table,Map<String, AttributeValue> item){
+                public void dynamoInsert(String table, Map<String, AttributeValue> key,Map<String, AttributeValueUpdate> item){
                     try{
-                        PutItemRequest putItemRequest = new PutItemRequest(table, item);
-                        PutItemResult putItemResult = conn.putItem(putItemRequest);
+                        UpdateItemRequest updateItemRequest = new UpdateItemRequest().withTableName(table).withKey(key).withAttributeUpdates(item);
+                        UpdateItemResult putItemResult = conn.updateItem(updateItemRequest);
                         System.out.println("Result: " + putItemResult);
 
                     } catch (AmazonServiceException ase) {
@@ -107,11 +140,9 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
             };
         }
 
-        private static Map<String, AttributeValue> newItem(String date, String tid,int maxWingspan) {
-            Map<String, AttributeValue> item = new HashMap<String, AttributeValue>();
-            item.put("date", new AttributeValue(date));
-            item.put("tower_id", new AttributeValue(tid));
-            item.put("max_ws",new AttributeValue().withN(Integer.toString(maxWingspan)));
+        private static Map<String, AttributeValueUpdate> newItem(String key, String value) {
+            Map<String, AttributeValueUpdate> item = new HashMap<String, AttributeValueUpdate>();
+            item.put(key,new AttributeValueUpdate().withValue(new AttributeValue(value)));
             return item;
         }
 
