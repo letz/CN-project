@@ -27,9 +27,9 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
         /**
          * Access credentials (there credentials are public).
          */
-        private static String USER = "";
+        private static String USER = System.getenv("AWS_ID");
         private static String URL = "dynamodb.us-west-2.amazonaws.com";
-        private static String PASS = "";
+        private static String PASS = System.getenv("AWS_SECRET_KEY");
         private static String TABLE_1 = "query1";
         private static String TABLE_2 = "query2";
         private static String TABLE_3 = "query3";
