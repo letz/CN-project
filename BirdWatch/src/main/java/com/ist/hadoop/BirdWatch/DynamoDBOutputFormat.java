@@ -86,11 +86,11 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                        String[] q2Keys = BirdKey.q1Keys(k.toString());
                        query = TABLE_2;
                        //key -> tower_id:date
-                       System.out.println("----------->>>>"+q2Keys[0] +":"+ q2Keys[1] +":"+ v.getWeighSum());
+                       System.out.println("----------->>>>"+q2Keys[1] +":"+ q2Keys[0] +":"+ v.getWeighSum());
                        item = newItem("weight_sum",v.getWeighSum()+"");
                        key = new HashMap<String, AttributeValue>();
-                       key.put("date", new AttributeValue(q2Keys[0]));
-                       key.put("tower_id",new AttributeValue(q2Keys[1]));
+                       key.put("date", new AttributeValue(q2Keys[1]));
+                       key.put("tower_id",new AttributeValue(q2Keys[0]));
                     }
                     else {
                         //key -> b_id
@@ -99,8 +99,9 @@ public class DynamoDBOutputFormat implements OutputFormat<Text, BirdStatsWritabl
                         System.out.println("----------->>>>"+q3Key+":"+ formatter.format(v.getDate()));
                         item = null;
                         key = new HashMap<String, AttributeValue>();
-                        key.put("b_id", new AttributeValue(q3Key));
-                        key.put("date",new AttributeValue(formatter.format(v.getDate())));
+                        key.put("bird_id", new AttributeValue(q3Key));
+                        key.put("date", new AttributeValue().withN(v.getDate().getTime()+""));
+
                     }
                    dynamoInsert(query, key,item);
                 }
