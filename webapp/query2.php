@@ -19,16 +19,16 @@ ini_set('error_reporting', E_ALL);
 
 	require 'vendor/autoload.php';
 	use Aws\DynamoDb\DynamoDbClient;
-	
+
 $client = DynamoDbClient::factory(array(
-    'key'    => 'AKIAJVD3GJD2JG7QM32A',
-    'secret' => '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',
+    'key'    => 'AKIAIVXREAQ44IAY64OA',
+    'secret' => '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',
     'region' => 'us-west-2'
 ));
 
 
 $iterator = $client->getIterator('Query', array(
-    'TableName' => 'query',
+    'TableName' => 'query2',
     'KeyConditions' => array(
         'date' => array(
             'AttributeValueList' => array(
@@ -48,7 +48,7 @@ $iterator = $client->getIterator('Query', array(
 
 if(iterator_count($iterator) > 0) {
     foreach ($iterator as $item) {
-        echo "Weight sum: " . $item['weight_sum']['N'] . "<br>";
+        echo "Weight sum: " . $item['weight_sum']['S'] . "<br>";
     } 
 } else {
     echo 'No Data for date: ' . $date . ' and tower_id: ' . $tower_id;

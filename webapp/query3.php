@@ -9,14 +9,14 @@ ini_set('error_reporting', E_ALL);
 
 	require 'vendor/autoload.php';
 	use Aws\DynamoDb\DynamoDbClient;
-	
+
 $client = DynamoDbClient::factory(array(
-    'key'    => 'AKIAJVD3GJD2JG7QM32A',
-    'secret' => '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',
+    'key'    => 'AKIAIVXREAQ44IAY64OA',
+    'secret' => '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',
     'region' => 'us-west-2'
 ));
 
-$one_week_ago = strtotime("-1 week");
+$one_week_ago = strtotime("-1 week") * 1000;
 
 
 $iterator = $client->getIterator('Scan', array(
@@ -40,7 +40,7 @@ $iterator = $client->getIterator('Scan', array(
 
 if(iterator_count($iterator) > 0) {
     foreach ($iterator as $item) {
-	$date = date('r', $item['date']['N']);
+	$date = date('r', $item['date']['N'] / 1000);
         echo $item['bird_id']['S'] . " - " . $date . "<br>";
     } 
 } else {
