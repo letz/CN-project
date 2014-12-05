@@ -1,6 +1,7 @@
 package com.ist.hadoop.BirdWatch;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.StringTokenizer;
@@ -18,6 +19,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 
 public class BirdWatchMapReducer {
 
@@ -115,6 +117,85 @@ public class BirdWatchMapReducer {
         }
     }
 
+    public static class Combiner extends MapReduceBase implements Reducer<Text, BirdDataWritable, Text, BirdDataWritable> {
+
+        private int mMaxWs;
+        private int mSumWeight;
+        private Date mDate;
+        private String mTid;
+        private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+        @Override
+        public void reduce(Text key, Iterator<BirdDataWritable> values,
+                OutputCollector<Text, BirdDataWritable> output,
+                Reporter reporter) throws IOException  {
+
+            BirdDataWritable val;
+            boolean isQ1 = false;
+            boolean isQ2 = false;
+            mMaxWs = 0;
+            mSumWeight = 0;
+            mDate = new Date(0);
+            BirdDataWritable mapvalue;
+            Text mapkey;
+
+            while(values.hasNext()) {
+                val = values.next();
+                isQ1 = BirdKey.isQ1(key.toString());
+                isQ2 = BirdKey.isQ2(key.toString());
+                if(isQ1) {
+                    handleQ1(key, val);
+
+                }
+                else if(isQ2) {
+
+                    handleQ2(key, val);
+                }
+                else {
+
+                    handleQ3(key, val);
+                }
+            }
+
+            if(isQ1) {
+                mapkey = new Text(BirdKey.makeKey(key.toString(), "1"));
+                mapvalue = new BirdDataWritable(mTid, mMaxWs);
+            }
+            else if(isQ2) {
+                mapkey = new Text(BirdKey.makeKey(mTid, key.toString(), "2"));
+                mapvalue = new BirdDataWritable(mSumWeight);
+
+            }
+            else {
+                //Q3
+                mapkey = new Text(BirdKey.makeKey(key.toString(),"3"));
+                mapvalue = new BirdDataWritable( mDate.toString());
+            }
+            output.collect(mapkey, mapvalue);
+
+        }
+
+        public void handleQ1(Text key, BirdDataWritable val) {
+            if (val.getWingSpan() > mMaxWs) {
+                mMaxWs = val.getWingSpan();
+                mTid = val.getTower();
+            }
+        }
+
+        public void handleQ2(Text key, BirdDataWritable val)  {
+            mSumWeight += val.getWeight();
+        }
+
+        public void handleQ3(Text key, BirdDataWritable value)  {
+            Date dateval = value.getRealDate();
+            if (mDate.getTime() < dateval.getTime()) {
+                mDate = dateval;
+            }
+        }
+    }
+
+
+
     public static void main(String[] args) throws Exception {
         JobConf conf = new JobConf(BirdWatchMapReducer.class);
         conf.setJobName(BirdWatchMapReducer.class.getName());
@@ -128,12 +209,12 @@ public class BirdWatchMapReducer {
         conf.setOutputValueClass(BirdStatsWritable.class);
 
         conf.setMapperClass(Map.class);
-        //conf.setCombinerClass(Reduce.class);
+        conf.setCombinerClass(Combiner.class);
         conf.setReducerClass(Reduce.class);
 
         conf.setInputFormat(TextInputFormat.class);
-        //conf.setOutputFormat(TextOutputFormat.class);
-        conf.setOutputFormat(DynamoDBOutputFormat.class);
+        conf.setOutputFormat(TextOutputFormat.class);
+        //conf.setOutputFormat(DynamoDBOutputFormat.class);
         //conf.setOutputFormat(SQLOutputFormat.class);
 
         FileInputFormat.setInputPaths(conf, new Path(args[0]));
